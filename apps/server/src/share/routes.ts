@@ -8,7 +8,7 @@ import searchService from "../services/search/services/search.js";
 import SearchContext from "../services/search/search_context.js";
 import type SNote from "./shaca/entities/snote.js";
 import type SAttachment from "./shaca/entities/sattachment.js";
-import { getDefaultTemplatePath, renderNoteContent } from "./content_renderer.js";
+import { getDefaultTemplatePath, getSharedSubTreeRoot, renderNoteContent } from "./content_renderer.js";
 import utils from "../services/utils.js";
 
 function addNoIndexHeader(note: SNote, res: Response) {
@@ -124,9 +124,14 @@ function register(router: Router) {
             return;
         }
 
+        if (note.isLabelTruthy("shareExclude")) {
+            res.status(404);
+            render404(res);
+            return;
+        }
+
         if (!checkNoteAccess(note.noteId, req, res)) {
             requestCredentials(res);
-
             return;
         }
 
@@ -157,14 +162,29 @@ function register(router: Router) {
         renderNote(shaca.shareRootNote, req, res);
     });
 
+    router.get("/share/:parentShareId/:shareId", (req, res) => {
+        shacaLoader.ensureLoad();
+
+        const { parentShareId, shareId } = req.params;
+
+        const note = shareId ? (shaca.aliasToNote[shareId] || shaca.notes[shareId]) : (shaca.aliasToNote[parentShareId] || shaca.notes[parentShareId]);
+        if (note){
+            note.parentId = parentShareId
+        }
+
+        renderNote(note, req, res);
+    });
+
     router.get("/share/:shareId", (req, res) => {
         shacaLoader.ensureLoad();
 
         const { shareId } = req.params;
 
         const note = shaca.aliasToNote[shareId] || shaca.notes[shareId];
+        const parent = getSharedSubTreeRoot(note)
 
-        renderNote(note, req, res);
+        res.redirect(`${parent?.note?.noteId}/${shareId}`)
+        // renderNote(note, req, res);
     });
 
     router.get("/share/api/notes/:noteId", (req, res) => {

@@ -38,15 +38,14 @@ interface Subroot {
     branch?: SBranch | BBranch
 }
 
-function getSharedSubTreeRoot(note: SNote | BNote | undefined): Subroot {
+export function getSharedSubTreeRoot(note: SNote | BNote | undefined, parentId: string | undefined = undefined): Subroot {
     if (!note || note.noteId === shareRoot.SHARE_ROOT_NOTE_ID) {
         // share root itself is not shared
         return {};
     }
 
-    // every path leads to share root, but which one to choose?
-    // for the sake of simplicity, URLs are not note paths
-    const parentBranch = note.getParentBranches()[0];
+    const parentBranches = note.getParentBranches()
+    const parentBranch = (parentId ? parentBranches.find((pb: SBranch | BBranch) => pb.parentNoteId === parentId) : undefined) || parentBranches[0];
 
     if (note instanceof BNote) {
         return {
@@ -62,7 +61,7 @@ function getSharedSubTreeRoot(note: SNote | BNote | undefined): Subroot {
         };
     }
 
-    return getSharedSubTreeRoot(parentBranch.getParentNote());
+    return getSharedSubTreeRoot(parentBranch.getParentNote(), parentId);
 }
 
 export function renderNoteForExport(note: BNote, parentBranch: BBranch, basePath: string, ancestors: string[]) {
@@ -89,9 +88,10 @@ export function renderNoteForExport(note: BNote, parentBranch: BBranch, basePath
 }
 
 export function renderNoteContent(note: SNote) {
-    const subRoot = getSharedSubTreeRoot(note);
+    
+    const subRoot = getSharedSubTreeRoot(note, note.parentId);
 
-    const ancestors: string[] = [];
+    const ancestors: string[] = []
     let notePointer = note;
     while (notePointer.parents[0]?.noteId !== subRoot.note?.noteId) {
         const pointerParent = notePointer.parents[0];
@@ -105,23 +105,23 @@ export function renderNoteContent(note: SNote) {
     // Determine CSS to load.
     const cssToLoad: string[] = [];
     if (!note.isLabelTruthy("shareOmitDefaultCss")) {
-        cssToLoad.push(`assets/styles.css`);
-        cssToLoad.push(`assets/scripts.css`);
+        cssToLoad.push(`../assets/styles.css`);
+        cssToLoad.push(`../assets/scripts.css`);
     }
     for (const cssRelation of note.getRelations("shareCss")) {
-        cssToLoad.push(`api/notes/${cssRelation.value}/download`);
+        cssToLoad.push(`../api/notes/${cssRelation.value}/download`);
     }
 
     // Determine JS to load.
     const jsToLoad: string[] = [
-        "assets/scripts.js"
+        "../assets/scripts.js"
     ];
     for (const jsRelation of note.getRelations("shareJs")) {
-        jsToLoad.push(`api/notes/${jsRelation.value}/download`);
+        jsToLoad.push(`../api/notes/${jsRelation.value}/download`);
     }
 
     const customLogoId = note.getRelation("shareLogo")?.value;
-    const logoUrl = customLogoId ? `api/images/${customLogoId}/image.png` : `../${assetUrlFragment}/images/icon-color.svg`;
+    const logoUrl = customLogoId ? `../api/images/${customLogoId}/image.png` : `../../${assetUrlFragment}/images/icon-color.svg`;
 
     return renderNoteContentInternal(note, {
         subRoot,
@@ -131,7 +131,7 @@ export function renderNoteContent(note: SNote) {
         logoUrl,
         ancestors,
         isStatic: false,
-        faviconUrl: note.hasRelation("shareFavicon") ? `api/notes/${note.getRelationValue("shareFavicon")}/download` : `../favicon.ico`
+        faviconUrl: note.hasRelation("shareFavicon") ? `../api/notes/${note.getRelationValue("shareFavicon")}/download` : `../../favicon.ico`
     });
 }
 
@@ -346,7 +346,7 @@ function handleAttachmentLink(linkEl: HTMLElement, href: string, getNote: (id: s
         const attachment = getAttachment(attachmentId);
 
         if (attachment) {
-            linkEl.setAttribute("href", `api/attachments/${attachmentId}/download`);
+            linkEl.setAttribute("href", `../api/attachments/${attachmentId}/download`);
             linkEl.classList.add(`attachment-link`);
             linkEl.classList.add(`role-${attachment.role}`);
             linkEl.childNodes.length = 0;
@@ -362,7 +362,7 @@ function handleAttachmentLink(linkEl: HTMLElement, href: string, getNote: (id: s
         const linkedNote = getNote(noteId);
         if (linkedNote) {
             const isExternalLink = linkedNote.hasLabel("shareExternalLink");
-            const href = isExternalLink ? linkedNote.getLabelValue("shareExternalLink") : `./${linkedNote.shareId}`;
+            const href = isExternalLink ? linkedNote.getLabelValue("shareExternalLink") : `../${linkedNote.shareId}`;
             if (href) {
                 linkEl.setAttribute("href", href);
             }
@@ -397,7 +397,7 @@ function renderMermaid(result: Result, note: SNote | BNote) {
     }
 
     result.content = `
-<img src="api/images/${note.noteId}/${note.encodedTitle}?${note.utcDateModified}">
+<img src="../api/images/${note.noteId}/${note.encodedTitle}?${note.utcDateModified}">
 <hr>
 <details>
     <summary>Chart source</summary>
@@ -406,14 +406,14 @@ function renderMermaid(result: Result, note: SNote | BNote) {
 }
 
 function renderImage(result: Result, note: SNote | BNote) {
-    result.content = `<img src="api/images/${note.noteId}/${note.encodedTitle}?${note.utcDateModified}">`;
+    result.content = `<img src="../api/images/${note.noteId}/${note.encodedTitle}?${note.utcDateModified}">`;
 }
 
 function renderFile(note: SNote | BNote, result: Result) {
     if (note.mime === "application/pdf") {
-        result.content = `<iframe class="pdf-view" src="api/notes/${note.noteId}/view"></iframe>`;
+        result.content = `<iframe class="pdf-view" src="../api/notes/${note.noteId}/view"></iframe>`;
     } else {
-        result.content = `<button type="button" onclick="location.href='api/notes/${note.noteId}/download'">Download file</button>`;
+        result.content = `<button type="button" onclick="location.href='../api/notes/${note.noteId}/download'">Download file</button>`;
     }
 }
 

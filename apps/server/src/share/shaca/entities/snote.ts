@@ -19,6 +19,7 @@ const isCredentials = (attr: SAttribute) => attr.type === "label" && attr.name =
 
 class SNote extends AbstractShacaEntity {
     noteId: string;
+    parentId?: string | undefined;
     title: string;
     type: string;
     mime: string;
@@ -38,6 +39,7 @@ class SNote extends AbstractShacaEntity {
         super();
 
         this.noteId = noteId;
+        this.parentId = undefined;
         this.title = isProtected ? "[protected]" : title;
         this.type = type;
         this.mime = mime;
@@ -59,6 +61,10 @@ class SNote extends AbstractShacaEntity {
         this.shaca.notes[this.noteId] = this;
     }
 
+    getParentId() {
+        return this.parentId;
+    }
+
     getParentBranches() {
         return this.parentBranches;
     }
@@ -72,7 +78,7 @@ class SNote extends AbstractShacaEntity {
     }
 
     getVisibleChildBranches() {
-        return this.getChildBranches().filter((branch) => !branch.isHidden && !branch.getNote().isLabelTruthy("shareHiddenFromTree"));
+        return this.getChildBranches().filter((branch) => !branch.isHidden && !branch.getNote().isLabelTruthy("shareHiddenFromTree") && !branch.getNote().isLabelTruthy("shareExclude"));
     }
 
     getParentNotes() {
@@ -80,7 +86,7 @@ class SNote extends AbstractShacaEntity {
     }
 
     getChildNotes() {
-        return this.children;
+        return this.children.filter((note) => !note.isLabelTruthy("shareExclude"));
     }
 
     getVisibleChildNotes() {

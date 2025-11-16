@@ -152,7 +152,7 @@ content = content.replaceAll(headingRe, (...match) => {
                     <p>This note has no content.</p>
                 <% } else { %>
                     <%
-                    content = content.replace(/<img /g, `<img alt="${t("share_theme.image_alt")}" loading="lazy" `);
+                    content = content.replace(/<img /g, `<img alt="${t("share_theme.image_alt")}" loading="lazy" `).replace(/src\=\"api\//g, `src="../api/`);
                     %>
                     <%- content %>
                 <% } %>
